@@ -1,0 +1,43 @@
+# Docker Compose for LOCAL DEVELOPMENT
+# Usage: docker compose up
+# First time only: docker compose up --build
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: axon-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app:cached  # Hot reload - syncs code changes
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+    networks:
+      - axon-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: axon-frontend
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend/app.py:/app/app.py:cached  # Hot reload - syncs code changes
+    environment:
+      - API_URL=http://backend:8000
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true --server.runOnSave=true --server.fileWatcherType=poll
+    depends_on:
+      - backend
+    networks:
+      - axon-network
+    restart: unless-stopped
+
+networks:
+  axon-network:
+    driver: bridge

@@ -1,0 +1,63 @@
+# =============================================================================
+# Docker Ignore File
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+LICENSE
+docs/
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Docker files (avoid recursive builds)
+Dockerfile*
+docker-compose*.yml
+
+# Scripts
+scripts/
+
+# GitHub
+.github/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+tests/
+*_test.py
+test_*.py
+
+# Logs
+*.log
+logs/
+

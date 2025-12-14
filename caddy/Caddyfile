@@ -1,0 +1,56 @@
+# Caddyfile - Reverse Proxy Configuration
+# Domain: gorgone.app
+
+{
+    # Global options
+    email admin@gorgone.app  # Required for Let's Encrypt notifications
+}
+
+# Main domain - serves the Streamlit frontend
+gorgone.app {
+    # Enable compression
+    encode gzip zstd
+
+    # Reverse proxy to Streamlit frontend
+    reverse_proxy frontend:8501
+
+    # Handle Streamlit WebSocket connections
+    @websockets {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websockets frontend:8501
+
+    # Logging
+    log {
+        output file /data/access.log
+        format console
+    }
+}
+
+# www redirect to main domain
+www.gorgone.app {
+    redir https://gorgone.app{uri} permanent
+}
+
+# API subdomain - serves the FastAPI backend
+api.gorgone.app {
+    # Enable compression
+    encode gzip zstd
+
+    # Reverse proxy to FastAPI backend
+    reverse_proxy backend:8000
+
+    # CORS headers (optional - can also be handled in FastAPI)
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
+    }
+
+    # Logging
+    log {
+        output file /data/api-access.log
+        format console
+    }
+}
