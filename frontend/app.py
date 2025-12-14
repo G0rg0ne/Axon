@@ -4,7 +4,7 @@ import io
 
 # Page configuration
 st.set_page_config(
-    page_title="Axon - PDF Extractor",
+    page_title="Axon Agent",
     page_icon="📄",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -142,8 +142,8 @@ def extract_text_from_pdf(pdf_file) -> tuple[str, int]:
 
 
 # Main Header
-st.markdown('<h1 class="main-header">📄 Axon PDF Extractor</h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Upload a PDF document to extract its text content instantly</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header"> Axon Agent </h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle"> Agent that helps you to summarize your scientific paper /p>', unsafe_allow_html=True)
 
 # Upload Section
 st.markdown("### 📤 Upload Document")
@@ -213,7 +213,7 @@ else:
     # Empty state
     st.markdown("""
     <div class="upload-card">
-        <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 1rem;">👆 Drop your PDF here</h3>
+        <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 1rem;">👆 Drop your Scientific Paper here</h3>
         <p style="color: rgba(255,255,255,0.5);">Supported format: PDF</p>
     </div>
     """, unsafe_allow_html=True)
@@ -221,6 +221,6 @@ else:
 # Footer
 st.markdown("---")
 st.markdown(
-    "<center><small style='color: rgba(255,255,255,0.4);'>Powered by Axon ⚡ • Text extraction happens in-memory, no files are stored</small></center>",
+    "<center><small style='color: rgba(255,255,255,0.4);'>Made with ❤️ by Gorgone </small></center>",
     unsafe_allow_html=True
 )
