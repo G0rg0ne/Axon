@@ -58,16 +58,16 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             
-            # Build and restart containers (use docker-compose for compatibility)
-            docker-compose -f docker-compose.prod.yml down
-            docker-compose -f docker-compose.prod.yml build --no-cache
-            docker-compose -f docker-compose.prod.yml up -d
+            # Build and restart containers
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml up -d
             
             # Clean up old images
             docker image prune -f
             
             # Show status
-            docker-compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml ps
 
       - name: Health Check
         uses: appleboy/ssh-action@v1.0.3
