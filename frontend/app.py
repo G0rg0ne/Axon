@@ -1,6 +1,6 @@
 import streamlit as st
-import PyPDF2
-import io
+import os
+import requests
 
 # Page configuration
 st.set_page_config(
@@ -124,22 +124,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def extract_text_from_pdf(pdf_file) -> tuple[str, int]:
-    """
-    Extract text content from a PDF file without saving it.
-    Returns the extracted text and number of pages.
-    """
-    pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_file.read()))
-    num_pages = len(pdf_reader.pages)
-    
-    text_content = []
-    for page_num, page in enumerate(pdf_reader.pages, 1):
-        page_text = page.extract_text()
-        if page_text:
-            text_content.append(f"--- Page {page_num} ---\n{page_text}")
-    
-    return "\n\n".join(text_content), num_pages
+# Extract text from PDF
+API_URL = os.getenv("API_URL","http://localhost:8000")
 
+def extract_text_from_pdf(pdf_file):
+    file_payload = {"file": (pdf_file.name, pdf_file.read(), "application/pdf")}
+    response = requests.post(f"{API_URL}/extract-text", files=file_payload, timeout=300)
+    return response.json()
 
 # Main Header
 st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
@@ -173,7 +164,10 @@ if uploaded_file is not None:
     if st.button("🔍 Extract Text", use_container_width=True):
         with st.spinner("Extracting text from PDF..."):
             try:
-                extracted_text, num_pages = extract_text_from_pdf(uploaded_file)
+                uploaded_file.seek(0)
+                pdf_extractor_response = extract_text_from_pdf(uploaded_file)
+                extracted_text = pdf_extractor_response['text']
+                num_pages = pdf_extractor_response['num_pages']
                 
                 if extracted_text.strip():
                     # Show extraction stats
