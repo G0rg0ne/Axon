@@ -5,7 +5,7 @@ import io
 # Page configuration
 st.set_page_config(
     page_title="Axon",
-    page_icon="static/axon_logo.jpeg",
+    page_icon="../static/axon_logo.jpeg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
