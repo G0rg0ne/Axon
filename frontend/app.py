@@ -4,8 +4,8 @@ import io
 
 # Page configuration
 st.set_page_config(
-    page_title="Axon Agent",
-    page_icon="📄",
+    page_title="Axon",
+    page_icon="static/axon_logo.jpeg",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -142,8 +142,8 @@ def extract_text_from_pdf(pdf_file) -> tuple[str, int]:
 
 
 # Main Header
-st.markdown('<h1 class="main-header"> Axon Agent </h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle"> Agent that helps you to summarize your scientific paper /p>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle"> Agent that helps you to summarize your scientific paper </p>', unsafe_allow_html=True)
 
 # Upload Section
 st.markdown("### 📤 Upload Document")
@@ -221,6 +221,6 @@ else:
 # Footer
 st.markdown("---")
 st.markdown(
-    "<center><small style='color: rgba(255,255,255,0.4);'>Made with ❤️ by Gorgone </small></center>",
+    "<center><small style='color: rgba(255,255,255,0.4);'> Made by <a href='https://github.com/G0rg0ne' target='_blank' style='color: rgba(255,255,255,0.4); text-decoration: underline;'>Gorgone</a> - 2025 </small></center>",
     unsafe_allow_html=True
 )
