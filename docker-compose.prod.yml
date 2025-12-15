@@ -30,6 +30,7 @@ services:
     expose:
       - "8501"
     environment:
+      - APP_MODE=PROD
       - API_URL=http://backend:8000
     depends_on:
       - backend
