@@ -166,8 +166,8 @@ if uploaded_file is not None:
             try:
                 uploaded_file.seek(0)
                 pdf_extractor_response = extract_text_from_pdf(uploaded_file)
-                extracted_text = pdf_extractor_response['text']
-                num_pages = pdf_extractor_response['num_pages']
+                extracted_text = "Test eazea eazeazezaea"
+                num_pages = 3
                 
                 if extracted_text.strip():
                     # Show extraction stats
