@@ -2,7 +2,7 @@
 
 A modern full-stack application with **FastAPI** backend, **Streamlit** frontend, **Docker** containerization, and **Caddy** reverse proxy with automatic HTTPS.
 
-**Live at:** [https://gorgone.app](https://gorgone.app)
+**Live at:** [https://axon-agent.online](https://axon-agent.online)
 
 ## 🏗️ Architecture
 
@@ -18,7 +18,7 @@ A modern full-stack application with **FastAPI** backend, **Streamlit** frontend
 │          Port 80 (HTTP) → 443 (HTTPS redirect)                  │
 └───────────────┬─────────────────────────────────┬───────────────┘
                 │                                 │
-       gorgone.app                        api.gorgone.app
+       axon-agent.online                        api.axon-agent.online
                 │                                 │
                 ▼                                 ▼
 ┌───────────────────────────┐   ┌───────────────────────────┐
@@ -248,9 +248,9 @@ Simply push to the `main` branch. GitHub Actions will:
 
 | URL | Service |
 |-----|---------|
-| `https://gorgone.app` | Streamlit Frontend |
-| `https://api.gorgone.app` | FastAPI Backend |
-| `https://api.gorgone.app/docs` | API Documentation |
+| `https://axon-agent.online` | Streamlit Frontend |
+| `https://api.axon-agent.online` | FastAPI Backend |
+| `https://api.axon-agent.online/docs` | API Documentation |
 
 ## 📝 Adding New Features
 
