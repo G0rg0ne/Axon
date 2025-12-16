@@ -29,6 +29,8 @@ jobs:
           pip install pytest httpx
 
       - name: Run backend tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd backend
           python -c "from app.main import app; print('Backend imports OK')"
