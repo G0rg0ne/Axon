@@ -1,13 +1,13 @@
 # Caddyfile - Reverse Proxy Configuration
-# Domain: gorgone.app
+# Domain: axon-agent.online
 
 {
     # Global options
-    email admin@gorgone.app  # Required for Let's Encrypt notifications
+    email ghost.beta.tester7@gmail.com  # Required for Let's Encrypt notifications
 }
 
 # Main domain - serves the Streamlit frontend
-gorgone.app {
+axon-agent.online {
     # Enable compression
     encode gzip zstd
 
@@ -29,12 +29,12 @@ gorgone.app {
 }
 
 # www redirect to main domain
-www.gorgone.app {
-    redir https://gorgone.app{uri} permanent
+www.axon-agent.online {
+    redir https://axon-agent.online{uri} permanent
 }
 
 # API subdomain - serves the FastAPI backend
-api.gorgone.app {
+api.axon-agent.online {
     # Enable compression
     encode gzip zstd
 

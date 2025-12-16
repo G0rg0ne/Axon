@@ -26,7 +26,7 @@ app = FastAPI(
 
 map_app_mode = {
     "DEV": "http://localhost:8501",
-    "PROD": "https://gorgone.app"
+    "PROD": "https://axon-agent.online"
 }
 # CORS configuration
 app.add_middleware(
