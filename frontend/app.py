@@ -209,7 +209,7 @@ def get_graph_config():
 
 # Main Header
 st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle"> Agent that helps you to summarize your scientific paper </p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle"> Agent that extracts knowledge graph from your documents</p>', unsafe_allow_html=True)
 
 # Upload Section
 st.markdown("### 📤 Upload Document")

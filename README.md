@@ -4,6 +4,12 @@ A modern full-stack application with **FastAPI** backend, **Streamlit** frontend
 
 **Live at:** [https://axon-agent.online](https://axon-agent.online)
 
+## 📸 How It Works
+
+Axon extracts entities and relationships from research papers to build interactive knowledge graphs:
+
+![Knowledge Graph Visualization](assets/ss_kg.png)
+
 ## 🏗️ Architecture
 
 ```
