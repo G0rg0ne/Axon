@@ -8,3 +8,5 @@ loguru==0.7.2
 llama-index==0.11.1
 openai==1.63.1
 pymupdf4llm
+python-dotenv==1.0.1
+langfuse==2.57.1
