@@ -3,4 +3,10 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.3
 python-multipart==0.0.19
 httpx==0.28.1
-
+PyPDF2==3.0.1
+loguru==0.7.2
+llama-index==0.11.1
+openai==1.63.1
+pymupdf4llm
+python-dotenv==1.0.1
+langfuse==2.57.1

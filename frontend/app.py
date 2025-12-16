@@ -1,6 +1,7 @@
 import streamlit as st
-import PyPDF2
-import io
+import os
+import requests
+from streamlit_agraph import agraph, Node, Edge, Config
 
 # Page configuration
 st.set_page_config(
@@ -124,22 +125,87 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def extract_text_from_pdf(pdf_file) -> tuple[str, int]:
-    """
-    Extract text content from a PDF file without saving it.
-    Returns the extracted text and number of pages.
-    """
-    pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_file.read()))
-    num_pages = len(pdf_reader.pages)
-    
-    text_content = []
-    for page_num, page in enumerate(pdf_reader.pages, 1):
-        page_text = page.extract_text()
-        if page_text:
-            text_content.append(f"--- Page {page_num} ---\n{page_text}")
-    
-    return "\n\n".join(text_content), num_pages
+# Extract text from PDF
+API_URL = os.getenv("API_URL","http://localhost:8000")
 
+# Color mapping for different entity types
+NODE_COLORS = {
+    "method":      "#3A86FF",  # Strong blue
+    "metric":      "#00B4D8",  # Cyan (clearly distinct from blue)
+    "dataset":     "#2EC4B6",  # Green-teal
+    "concept":     "#8338EC",  # Violet
+    "technology":  "#FFBE0B",  # Yellow / gold
+    "result":      "#FB5607",  # Bright orange
+    "problem":     "#D00000",  # Deep red
+}
+
+def extract_knowledge_graph(pdf_file):
+    """Extract knowledge graph from PDF via API"""
+    file_payload = {"file": (pdf_file.name, pdf_file.read(), "application/pdf")}
+    response = requests.post(f"{API_URL}/extract-text", files=file_payload, timeout=300)
+    return response.json()
+
+def build_agraph_nodes(nodes_data):
+    """Convert API nodes to agraph Node objects"""
+    nodes = []
+    for node in nodes_data:
+        color = NODE_COLORS.get(node.get("type", ""), "#888888")
+        nodes.append(Node(
+            id=node["id"],
+            label=node["label"],
+            size=25,
+            color=color,
+            font={"color": "#ffffff", "size": 14, "strokeWidth": 2, "strokeColor": "#000000"},
+            title=f"{node['type'].upper()}\n{node.get('properties', {}).get('description', '') or ''}"
+        ))
+    return nodes
+
+def build_agraph_edges(edges_data):
+    """Convert API edges to agraph Edge objects"""
+    edges = []
+    for edge in edges_data:
+        edges.append(Edge(
+            source=edge["source"],
+            target=edge["target"],
+            label=edge["relationship"],
+            color="#9ca3af",
+            font={"color": "#22c55e", "size": 6, "strokeWidth": 1, "strokeColor": "#14532d"}
+        ))
+    return edges
+
+def get_graph_config():
+    """Configure the graph visualization"""
+    return Config(
+        width="100%",
+        height=700,
+        directed=True,
+        physics=True,
+        hierarchical=False,
+        nodeHighlightBehavior=True,
+        highlightColor="#00d4ff",
+        collapsible=False,
+        node={
+            "labelProperty": "label",
+            "renderLabel": True,
+            "font": {
+                "color": "#ffffff",
+                "size": 14,
+                "strokeWidth": 3,
+                "strokeColor": "#000000",
+            },
+        },
+        link={
+            "labelProperty": "label",
+            "renderLabel": True,
+            "font": {
+                "color": "#e5e7eb",
+                "size": 12,
+                "strokeWidth": 3,
+                "strokeColor": "#000000",
+                "align": "middle",
+            },
+        }
+    )
 
 # Main Header
 st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
@@ -170,44 +236,80 @@ if uploaded_file is not None:
     """, unsafe_allow_html=True)
     
     # Extract button
-    if st.button("🔍 Extract Text", use_container_width=True):
-        with st.spinner("Extracting text from PDF..."):
+    if st.button("🧠 Extract Knowledge Graph", use_container_width=True):
+        with st.spinner("Extracting knowledge graph from PDF... This may take a moment."):
             try:
-                extracted_text, num_pages = extract_text_from_pdf(uploaded_file)
+                uploaded_file.seek(0)
+                response = extract_knowledge_graph(uploaded_file)
                 
-                if extracted_text.strip():
-                    # Show extraction stats
-                    word_count = len(extracted_text.split())
-                    char_count = len(extracted_text)
-                    
-                    st.markdown("### 📊 Extraction Results")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("📄 Pages", num_pages)
-                    with col2:
-                        st.metric("📝 Words", f"{word_count:,}")
-                    with col3:
-                        st.metric("🔤 Characters", f"{char_count:,}")
-                    
-                    st.markdown("### 📜 Extracted Content")
-                    
-                    # Display extracted text in a scrollable container
-                    st.markdown(f'<div class="extracted-text">{extracted_text}</div>', unsafe_allow_html=True)
-                    
-                    # Download button for extracted text
-                    st.download_button(
-                        label="💾 Download as Text File",
-                        data=extracted_text,
-                        file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}_extracted.txt",
-                        mime="text/plain",
-                        use_container_width=True
-                    )
+                graph_data = response.get("graph", {})
+                nodes_data = graph_data.get("nodes", [])
+                edges_data = graph_data.get("edges", [])
+                chunk_count = response.get("chunk_count", 0)
+                
+                if nodes_data:
+                    # Store in session state for persistence
+                    st.session_state["graph_nodes"] = nodes_data
+                    st.session_state["graph_edges"] = edges_data
+                    st.session_state["chunk_count"] = chunk_count
                 else:
-                    st.warning("⚠️ No text content could be extracted from this PDF. It might be a scanned document or contain only images.")
+                    st.warning("⚠️ No entities could be extracted from this PDF.")
                     
             except Exception as e:
-                st.error(f"❌ Error extracting text: {str(e)}")
+                st.error(f"❌ Error extracting knowledge graph: {str(e)}")
+
+    # Display graph if available in session state
+    if "graph_nodes" in st.session_state and st.session_state["graph_nodes"]:
+        nodes_data = st.session_state["graph_nodes"]
+        edges_data = st.session_state["graph_edges"]
+        chunk_count = st.session_state["chunk_count"]
+        
+        # Show extraction stats
+        st.markdown("### 📊 Extraction Results")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("🔷 Entities", len(nodes_data))
+        with col2:
+            st.metric("🔗 Relations", len(edges_data))
+        with col3:
+            st.metric("📄 Chunks", chunk_count)
+        
+        # Entity type legend
+        st.markdown("### 🎨 Entity Types")
+        legend_cols = st.columns(len(NODE_COLORS))
+        for i, (entity_type, color) in enumerate(NODE_COLORS.items()):
+            with legend_cols[i]:
+                st.markdown(
+                    f'<span style="color:{color}; font-weight:bold;">●</span> {entity_type.capitalize()}',
+                    unsafe_allow_html=True
+                )
+        
+        # Render interactive graph
+        st.markdown("### 🕸️ Knowledge Graph")
+        
+        agraph_nodes = build_agraph_nodes(nodes_data)
+        agraph_edges = build_agraph_edges(edges_data)
+        config = get_graph_config()
+        
+        agraph(nodes=agraph_nodes, edges=agraph_edges, config=config)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Show entities and relations in expandable sections
+        with st.expander("📋 View All Entities"):
+            for node in nodes_data:
+                color = NODE_COLORS.get(node.get("type", ""), "#888888")
+                st.markdown(
+                    f'<span style="color:{color};">●</span> **{node["label"]}** ({node["type"]})',
+                    unsafe_allow_html=True
+                )
+                if node.get("properties", {}).get("description"):
+                    st.caption(node["properties"]["description"])
+        
+        with st.expander("🔗 View All Relations"):
+            for edge in edges_data:
+                st.markdown(f'`{edge["source"]}` → **{edge["relationship"]}** → `{edge["target"]}`')
 
 else:
     # Empty state
