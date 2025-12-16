@@ -8,12 +8,12 @@ import fitz
 import io
 import pymupdf4llm
 from loguru import logger
-from typing import List
+from typing import List, Optional
 from .chunk_builder import (
     semantic_chunk_text,
     extract_sections_from_markdown,
 )
-from .ontology import extract_graph_from_chunk
+from .ontology import extract_graph_from_chunk, KnowledgeGraphExtraction
 
 load_dotenv()
 APP_MODE = os.getenv("APP_MODE","DEV")
@@ -41,8 +41,26 @@ class HealthResponse(BaseModel):
     status: str
     message: str
 
+# Response models for graph extraction
+class NodeResponse(BaseModel):
+    id: str
+    label: str
+    type: str
+    properties: Optional[dict] = None
+
+class EdgeResponse(BaseModel):
+    source: str
+    target: str
+    relationship: str
+    properties: Optional[dict] = None
+
+class GraphResponse(BaseModel):
+    nodes: List[NodeResponse]
+    edges: List[EdgeResponse]
+
 class ExtractPDFResponse(BaseModel):
-    chunks: List[dict]
+    graph: GraphResponse
+    chunk_count: int
 
 @app.get("/", response_model=HealthResponse)
 async def root():
@@ -51,29 +69,6 @@ async def root():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse(status="healthy", message="All systems operational")
-
-#@app.post("/extract-text", response_model=ExtractPDFResponse)
-# async def extract_text(file: UploadFile = File(...)):
-#     logger.info(f"Extracting text from {file.filename}")
-#     try:
-#         pdf_bytes = await file.read()
-#         pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
-#         num_pages = len(pdf_reader.pages)
-#         text_content = []
-#         for page_num, page in enumerate(pdf_reader.pages, 1):
-#             page_text = page.extract_text()
-#             if page_text:
-#                 text_content.append(f"--- Page {page_num} ---\n{page_text}")
-#         logger.info(f"Successfully extracted text from {file.filename}")
-
-#         chunks = semantic_chunk_text(text="\n\n".join(text_content))
-#         if not chunks:
-#             raise HTTPException(status_code=400, detail="No chunks found")
-
-#         return ExtractPDFResponse(text="\n\n".join(text_content), num_pages=num_pages)
-#     except Exception as e:
-#         logger.error(f"Error extracting text from {file.filename}: {e}")
-#        raise HTTPException(status_code=400, detail="Invalid PDF file")
 
 @app.post("/extract-text")
 async def extract_text(file: UploadFile = File(...)):
@@ -104,10 +99,50 @@ async def extract_text(file: UploadFile = File(...)):
             )
             all_chunks.extend(section_chunks)
         logger.info(f"Created {len(all_chunks)} chunks from {len(raw_sections)} sections")
+
+        # Extract knowledge graphs from each chunk and merge them
+        all_nodes = {}  # Use dict to deduplicate by id
+        all_edges = []
+        
         for chunk in all_chunks:
             graph = extract_graph_from_chunk(chunk['text'], chunk['metadata'])
-            logger.info(f"Graph: {graph}")
-        return ExtractPDFResponse(chunks=all_chunks)
+            
+            # Merge nodes (deduplicate by id)
+            for node in graph.nodes:
+                if node.id not in all_nodes:
+                    all_nodes[node.id] = NodeResponse(
+                        id=node.id,
+                        label=node.label,
+                        type=node.type,
+                        properties=node.properties.model_dump() if node.properties else None
+                    )
+            
+            # Add edges (avoid exact duplicates)
+            for edge in graph.edges:
+                edge_response = EdgeResponse(
+                    source=edge.source,
+                    target=edge.target,
+                    relationship=edge.relationship,
+                    properties=edge.properties.model_dump() if edge.properties else None
+                )
+                # Check for duplicate edges
+                is_duplicate = any(
+                    e.source == edge_response.source and 
+                    e.target == edge_response.target and 
+                    e.relationship == edge_response.relationship 
+                    for e in all_edges
+                )
+                if not is_duplicate:
+                    all_edges.append(edge_response)
+        
+        merged_graph = GraphResponse(
+            nodes=list(all_nodes.values()),
+            edges=all_edges
+        )
+        
+        logger.info(f"Extracted {len(merged_graph.nodes)} nodes and {len(merged_graph.edges)} edges")
+        
+        return ExtractPDFResponse(graph=merged_graph, chunk_count=len(all_chunks))
 
     except Exception as e:
         logger.error(f"Error processing {file.filename}: {e}")

@@ -71,11 +71,13 @@ def extract_graph_from_chunk(chunk_text: str, chunk_metadata: dict) -> Knowledge
     """
     Uses the LLM to extract entities and relations from a single text chunk.
     """
+    section = chunk_metadata.get('section', 'Unknown')
+    logger.debug(f"Extracting from section: {section}")
     
     # Fetch the system prompt from Langfuse
     prompt = langfuse.get_prompt("graph_maker")
     system_prompt = prompt.compile(
-        section=chunk_metadata.get('section', 'Unknown'),
+        section=section,
         chunk_text=chunk_text
     )
     # Use OpenAI's structured output (beta) to enforce Pydantic schema
@@ -88,7 +90,9 @@ def extract_graph_from_chunk(chunk_text: str, chunk_metadata: dict) -> Knowledge
             ],
             response_format=KnowledgeGraphExtraction
         )
-        return completion.choices[0].message.parsed
+        result = completion.choices[0].message.parsed
+        logger.info(f"Extracted {len(result.nodes)} nodes, {len(result.edges)} edges")
+        return result
     except Exception as e:
-        print(f"Extraction failed: {e}")
+        logger.error(f"Extraction failed: {e}")
         return KnowledgeGraphExtraction(nodes=[], edges=[])
