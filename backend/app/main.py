@@ -13,6 +13,7 @@ from .chunk_builder import (
     semantic_chunk_text,
     extract_sections_from_markdown,
 )
+from .ontology import extract_graph_from_chunk
 
 load_dotenv()
 APP_MODE = os.getenv("APP_MODE","DEV")
@@ -102,8 +103,10 @@ async def extract_text(file: UploadFile = File(...)):
                 section_name=sec['section']
             )
             all_chunks.extend(section_chunks)
-            
         logger.info(f"Created {len(all_chunks)} chunks from {len(raw_sections)} sections")
+        for chunk in all_chunks:
+            graph = extract_graph_from_chunk(chunk['text'], chunk['metadata'])
+            logger.info(f"Graph: {graph}")
         return ExtractPDFResponse(chunks=all_chunks)
 
     except Exception as e:
