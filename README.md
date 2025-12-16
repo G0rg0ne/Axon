@@ -128,6 +128,8 @@ Point your domain to your Hetzner server:
 
 Add these secrets in your GitHub repository (Settings → Secrets → Actions):
 
+#### Server Connection Secrets
+
 | Secret Name | Value |
 |-------------|-------|
 | `HETZNER_HOST` | Your server's IP address |

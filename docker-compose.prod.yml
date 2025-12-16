@@ -9,9 +9,13 @@ services:
     container_name: axon-backend
     expose:
       - "8000"
+    env_file:
+      - .env
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
+      - LANGFUSE_BASE_URL=https://cloud.langfuse.com
+      - OPENAI_MODEL=gpt-4o
     networks:
       - axon-network
     restart: always
@@ -62,5 +66,3 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
-
-

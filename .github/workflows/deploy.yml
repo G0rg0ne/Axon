@@ -41,12 +41,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Hetzner Server
+      - name: Create environment file and deploy
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Application secrets
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
+          APP_MODE: "PROD"
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: OPENAI_API_KEY,OPENAI_MODEL,LANGFUSE_SECRET_KEY,LANGFUSE_PUBLIC_KEY,LANGFUSE_BASE_URL,APP_MODE
           script: |
             # Navigate to app directory
             cd /opt/axon
@@ -57,6 +66,23 @@ jobs:
             # Pull latest changes
             git fetch origin main
             git reset --hard origin/main
+            
+            # Create .env file with secrets (secure: only readable by owner)
+            echo "Creating environment file..."
+            {
+              echo "# OpenAI Configuration"
+              echo "OPENAI_API_KEY=${OPENAI_API_KEY}"
+              echo ""
+              echo "# Langfuse Configuration"
+              echo "LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}"
+              echo "LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}"
+              echo ""
+              echo "# Application Mode"
+              echo "APP_MODE=${APP_MODE}"
+            } > .env
+            
+            # Secure the .env file
+            chmod 600 .env
             
             # Build and restart containers
             docker compose -f docker-compose.prod.yml down
@@ -84,4 +110,3 @@ jobs:
             
             # Check backend health
             curl -f http://localhost:8000/health || echo "Backend health check failed"
-

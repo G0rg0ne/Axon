@@ -18,6 +18,7 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - OPENAI_MODEL=gpt-4o
+      - LANGFUSE_BASE_URL=https://cloud.langfuse.com
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
     networks:
       - axon-network
