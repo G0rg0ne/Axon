@@ -169,7 +169,7 @@ def build_agraph_edges(edges_data):
             target=edge["target"],
             label=edge["relationship"],
             color="#9ca3af",
-            font={"color": "#fb923c", "size": 6, "strokeWidth": 1, "strokeColor": "#1a1a2e"}
+            font={"color": "#22c55e", "size": 6, "strokeWidth": 1, "strokeColor": "#14532d"}
         ))
     return edges
 
