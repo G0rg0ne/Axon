@@ -71,13 +71,13 @@ class ChunkResponse(BaseModel):
     chunks: List[dict]
     chunk_count: int
 
-# Step 3: Extract Graph Request/Response
-class ExtractGraphRequest(BaseModel):
-    chunks: List[dict]
+# Step 3: Extract Graph from single chunk
+class ExtractChunkRequest(BaseModel):
+    chunk: dict
 
-class ExtractGraphResponse(BaseModel):
-    graph: GraphResponse
-    chunk_count: int
+class ExtractChunkResponse(BaseModel):
+    nodes: List[NodeResponse]
+    edges: List[EdgeResponse]
 
 @app.get("/", response_model=HealthResponse)
 async def root():
@@ -141,55 +141,35 @@ async def chunk_sections(request: ChunkSectionsRequest):
         logger.error(f"Error chunking sections: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/extract-graph", response_model=ExtractGraphResponse)
-async def extract_graph(request: ExtractGraphRequest):
-    """Step 3: Extract knowledge graph from chunks"""
-    logger.info(f"Extracting graph from {len(request.chunks)} chunks")
-    
+@app.post("/extract-chunk", response_model=ExtractChunkResponse)
+async def extract_chunk(request: ExtractChunkRequest):
+    """Step 3: Extract knowledge graph from a single chunk"""
     try:
-        all_nodes = {}
-        all_edges = []
+        graph = extract_graph_from_chunk(request.chunk['text'], request.chunk['metadata'])
         
-        for chunk in request.chunks:
-            graph = extract_graph_from_chunk(chunk['text'], chunk['metadata'])
-            
-            for node in graph.nodes:
-                if node.id not in all_nodes:
-                    all_nodes[node.id] = NodeResponse(
-                        id=node.id,
-                        label=node.label,
-                        type=node.type,
-                        properties=node.properties.model_dump() if node.properties else None
-                    )
-            
-            for edge in graph.edges:
-                edge_response = EdgeResponse(
-                    source=edge.source,
-                    target=edge.target,
-                    relationship=edge.relationship,
-                    properties=edge.properties.model_dump() if edge.properties else None
-                )
-                is_duplicate = any(
-                    e.source == edge_response.source and 
-                    e.target == edge_response.target and 
-                    e.relationship == edge_response.relationship 
-                    for e in all_edges
-                )
-                if not is_duplicate:
-                    all_edges.append(edge_response)
+        nodes = [
+            NodeResponse(
+                id=node.id,
+                label=node.label,
+                type=node.type,
+                properties=node.properties.model_dump() if node.properties else None
+            )
+            for node in graph.nodes
+        ]
         
-        merged_graph = GraphResponse(
-            nodes=list(all_nodes.values()),
-            edges=all_edges
-        )
+        edges = [
+            EdgeResponse(
+                source=edge.source,
+                target=edge.target,
+                relationship=edge.relationship,
+                properties=edge.properties.model_dump() if edge.properties else None
+            )
+            for edge in graph.edges
+        ]
         
-        logger.info(f"Extracted {len(merged_graph.nodes)} nodes and {len(merged_graph.edges)} edges")
-        
-        return ExtractGraphResponse(
-            graph=merged_graph,
-            chunk_count=len(request.chunks)
-        )
+        logger.debug(f"Extracted {len(nodes)} nodes, {len(edges)} edges from chunk")
+        return ExtractChunkResponse(nodes=nodes, edges=edges)
 
     except Exception as e:
-        logger.error(f"Error extracting graph: {e}")
+        logger.error(f"Error extracting from chunk: {e}")
         raise HTTPException(status_code=500, detail=str(e))

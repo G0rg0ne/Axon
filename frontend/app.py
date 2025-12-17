@@ -139,6 +139,48 @@ st.markdown("""
     .phase-pending {
         opacity: 0.5;
     }
+    
+    .preview-box {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+    }
+    
+    .section-tag {
+        display: inline-block;
+        background: rgba(123, 44, 191, 0.2);
+        border: 1px solid rgba(123, 44, 191, 0.4);
+        border-radius: 6px;
+        padding: 0.3rem 0.6rem;
+        margin: 0.2rem;
+        font-size: 0.8rem;
+        color: #c084fc;
+    }
+    
+    .chunk-preview {
+        background: rgba(0, 212, 255, 0.05);
+        border-left: 3px solid #00d4ff;
+        padding: 0.8rem;
+        margin: 0.5rem 0;
+        border-radius: 0 8px 8px 0;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        max-height: 120px;
+        overflow: hidden;
+    }
+    
+    .preview-label {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -166,9 +208,9 @@ def chunk_sections(sections, filename):
     response.raise_for_status()
     return response.json()
 
-def extract_graph(chunks):
-    payload = {"chunks": chunks}
-    response = requests.post(f"{API_URL}/extract-graph", json=payload, timeout=300)
+def extract_chunk(chunk):
+    payload = {"chunk": chunk}
+    response = requests.post(f"{API_URL}/extract-chunk", json=payload, timeout=60)
     response.raise_for_status()
     return response.json()
 
@@ -249,6 +291,38 @@ def get_phase_html(current_phase, phase_results):
     
     return f'''<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">{"".join(cards)}</div>'''
 
+def get_sections_preview_html(sections):
+    tags = "".join([f'<span class="section-tag">📑 {s["section"]}</span>' for s in sections[:8]])
+    more = f'<span class="section-tag">+{len(sections) - 8} more</span>' if len(sections) > 8 else ""
+    return f'''<div class="preview-box">
+        <div class="preview-label">📄 Detected Sections</div>
+        <div>{tags}{more}</div>
+    </div>'''
+
+def get_chunks_preview_html(chunks):
+    if not chunks:
+        return ""
+    sample = chunks[0]
+    text_preview = sample["text"][:300] + "..." if len(sample["text"]) > 300 else sample["text"]
+    section = sample.get("metadata", {}).get("section", "Unknown")
+    return f'''<div class="preview-box">
+        <div class="preview-label">✂️ Sample Chunk (from "{section}")</div>
+        <div class="chunk-preview">{text_preview}</div>
+        <div style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: 0.5rem;">
+            Chunk 1 of {len(chunks)} • {sample.get("char_count", 0)} characters
+        </div>
+    </div>'''
+
+def get_extraction_progress_html(current, total):
+    pct = int((current / total) * 100) if total > 0 else 0
+    return f'''<div class="preview-box">
+        <div class="preview-label">🧠 Extracting entities & relations</div>
+        <div style="background: rgba(255,255,255,0.1); border-radius: 4px; height: 8px; margin: 0.5rem 0;">
+            <div style="background: linear-gradient(90deg, #7b2cbf, #00d4ff); width: {pct}%; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+        </div>
+        <div style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Processing chunk {current} of {total}</div>
+    </div>'''
+
 st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle"> Agent that extracts knowledge graph from your documents</p>', unsafe_allow_html=True)
 
@@ -278,6 +352,7 @@ if uploaded_file is not None:
         phase_results = {}
         progress_container = st.empty()
         status_container = st.empty()
+        preview_container = st.empty()
         
         try:
             # Phase 1: Parse PDF
@@ -290,6 +365,7 @@ if uploaded_file is not None:
             
             progress_container.markdown(get_phase_html("chunk", phase_results), unsafe_allow_html=True)
             status_container.success(f"✓ Parsed PDF: {parse_result['section_count']} sections found")
+            preview_container.markdown(get_sections_preview_html(parse_result["sections"]), unsafe_allow_html=True)
             
             # Phase 2: Chunk Sections
             status_container.info("✂️ Creating semantic chunks from sections...")
@@ -299,20 +375,43 @@ if uploaded_file is not None:
             
             progress_container.markdown(get_phase_html("extract", phase_results), unsafe_allow_html=True)
             status_container.success(f"✓ Created {chunk_result['chunk_count']} semantic chunks")
+            preview_container.markdown(get_chunks_preview_html(chunk_result["chunks"]), unsafe_allow_html=True)
             
-            # Phase 3: Extract Graph
-            status_container.info("🧠 Extracting knowledge graph from chunks... This may take a moment.")
+            # Phase 3: Extract Graph (chunk by chunk with progress)
+            status_container.info("🧠 Extracting knowledge graph from chunks...")
             
-            graph_result = extract_graph(chunk_result["chunks"])
-            phase_results["extract"] = graph_result
+            all_nodes = {}
+            all_edges = []
+            chunks = chunk_result["chunks"]
+            total_chunks = len(chunks)
             
+            for i, chunk in enumerate(chunks):
+                preview_container.markdown(get_extraction_progress_html(i + 1, total_chunks), unsafe_allow_html=True)
+                
+                result = extract_chunk(chunk)
+                
+                for node in result.get("nodes", []):
+                    if node["id"] not in all_nodes:
+                        all_nodes[node["id"]] = node
+                
+                for edge in result.get("edges", []):
+                    is_duplicate = any(
+                        e["source"] == edge["source"] and 
+                        e["target"] == edge["target"] and 
+                        e["relationship"] == edge["relationship"]
+                        for e in all_edges
+                    )
+                    if not is_duplicate:
+                        all_edges.append(edge)
+            
+            phase_results["extract"] = True
             progress_container.markdown(get_phase_html(None, phase_results), unsafe_allow_html=True)
             status_container.success("✓ Knowledge graph extraction complete!")
+            preview_container.empty()
             
-            graph_data = graph_result.get("graph", {})
-            nodes_data = graph_data.get("nodes", [])
-            edges_data = graph_data.get("edges", [])
-            chunk_count = graph_result.get("chunk_count", 0)
+            nodes_data = list(all_nodes.values())
+            edges_data = all_edges
+            chunk_count = total_chunks
             
             if nodes_data:
                 st.session_state["graph_nodes"] = nodes_data

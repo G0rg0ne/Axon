@@ -72,7 +72,6 @@ def extract_graph_from_chunk(chunk_text: str, chunk_metadata: dict) -> Knowledge
     Uses the LLM to extract entities and relations from a single text chunk.
     """
     section = chunk_metadata.get('section', 'Unknown')
-    logger.debug(f"Extracting from section: {section}")
     
     # Fetch the system prompt from Langfuse
     prompt = langfuse.get_prompt("graph_maker")
