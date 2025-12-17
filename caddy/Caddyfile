@@ -55,3 +55,25 @@ api.axon-agent.online {
         format console
     }
 }
+
+# Status page subdomain - Uptime Kuma monitoring
+status.axon-agent.online {
+    # Enable compression
+    encode gzip zstd
+
+    # Reverse proxy to Uptime Kuma
+    reverse_proxy uptime-kuma:3001
+
+    # Handle WebSocket connections (required for real-time updates)
+    @websockets {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websockets uptime-kuma:3001
+
+    # Logging
+    log {
+        output file /data/status-access.log
+        format console
+    }
+}
