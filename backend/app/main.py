@@ -5,7 +5,6 @@ from fastapi import UploadFile, File, HTTPException
 import os
 from dotenv import load_dotenv
 import fitz
-import io
 import pymupdf4llm
 from loguru import logger
 from typing import List, Optional
@@ -13,7 +12,7 @@ from .chunk_builder import (
     semantic_chunk_text,
     extract_sections_from_markdown,
 )
-from .ontology import extract_graph_from_chunk, KnowledgeGraphExtraction
+from .ontology import extract_graph_from_chunk
 
 load_dotenv()
 APP_MODE = os.getenv("APP_MODE","DEV")
@@ -28,10 +27,10 @@ map_app_mode = {
     "DEV": "http://localhost:8501",
     "PROD": "https://axon-agent.online"
 }
-# CORS configuration
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[map_app_mode[APP_MODE]],  # In production, replace with your frontend domain
+    allow_origins=[map_app_mode[APP_MODE]],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,7 +40,6 @@ class HealthResponse(BaseModel):
     status: str
     message: str
 
-# Response models for graph extraction
 class NodeResponse(BaseModel):
     id: str
     label: str
@@ -58,7 +56,26 @@ class GraphResponse(BaseModel):
     nodes: List[NodeResponse]
     edges: List[EdgeResponse]
 
-class ExtractPDFResponse(BaseModel):
+# Step 1: Parse PDF Response
+class ParsePDFResponse(BaseModel):
+    markdown: str
+    sections: List[dict]
+    section_count: int
+
+# Step 2: Chunk Sections Request/Response
+class ChunkSectionsRequest(BaseModel):
+    sections: List[dict]
+    filename: str
+
+class ChunkResponse(BaseModel):
+    chunks: List[dict]
+    chunk_count: int
+
+# Step 3: Extract Graph Request/Response
+class ExtractGraphRequest(BaseModel):
+    chunks: List[dict]
+
+class ExtractGraphResponse(BaseModel):
     graph: GraphResponse
     chunk_count: int
 
@@ -70,44 +87,72 @@ async def root():
 async def health_check():
     return HealthResponse(status="healthy", message="All systems operational")
 
-@app.post("/extract-text")
-async def extract_text(file: UploadFile = File(...)):
-    logger.info(f"Extracting text from {file.filename}")
+@app.post("/parse-pdf", response_model=ParsePDFResponse)
+async def parse_pdf(file: UploadFile = File(...)):
+    """Step 1: Upload PDF and convert to markdown, extract sections"""
+    logger.info(f"Parsing PDF: {file.filename}")
     
     try:
         pdf_bytes = await file.read()
         
-        # 1. Convert to Markdown
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
             md_text = pymupdf4llm.to_markdown(doc)
 
         if not md_text:
-            raise ValueError("No text extracted")
+            raise ValueError("No text extracted from PDF")
 
-        # 2. FIRST SPLIT: Split by Markdown Headers (Structural)
-        raw_sections = extract_sections_from_markdown(md_text)
+        sections = extract_sections_from_markdown(md_text)
+        logger.info(f"Extracted {len(sections)} sections from {file.filename}")
         
+        return ParsePDFResponse(
+            markdown=md_text,
+            sections=sections,
+            section_count=len(sections)
+        )
+
+    except Exception as e:
+        logger.error(f"Error parsing {file.filename}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chunk-sections", response_model=ChunkResponse)
+async def chunk_sections(request: ChunkSectionsRequest):
+    """Step 2: Semantic chunking of sections"""
+    logger.info(f"Chunking {len(request.sections)} sections for {request.filename}")
+    
+    try:
         all_chunks = []
         
-        # 3. SECOND SPLIT: Semantic Chunking per Section
-        for sec in raw_sections:
-            logger.info(f"Processing section: {sec['section']}")
+        for sec in request.sections:
             section_chunks = semantic_chunk_text(
                 text=sec['text'], 
-                filename=file.filename,
+                filename=request.filename,
                 section_name=sec['section']
             )
             all_chunks.extend(section_chunks)
-        logger.info(f"Created {len(all_chunks)} chunks from {len(raw_sections)} sections")
+        
+        logger.info(f"Created {len(all_chunks)} chunks")
+        
+        return ChunkResponse(
+            chunks=all_chunks,
+            chunk_count=len(all_chunks)
+        )
 
-        # Extract knowledge graphs from each chunk and merge them
-        all_nodes = {}  # Use dict to deduplicate by id
+    except Exception as e:
+        logger.error(f"Error chunking sections: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/extract-graph", response_model=ExtractGraphResponse)
+async def extract_graph(request: ExtractGraphRequest):
+    """Step 3: Extract knowledge graph from chunks"""
+    logger.info(f"Extracting graph from {len(request.chunks)} chunks")
+    
+    try:
+        all_nodes = {}
         all_edges = []
         
-        for chunk in all_chunks:
+        for chunk in request.chunks:
             graph = extract_graph_from_chunk(chunk['text'], chunk['metadata'])
             
-            # Merge nodes (deduplicate by id)
             for node in graph.nodes:
                 if node.id not in all_nodes:
                     all_nodes[node.id] = NodeResponse(
@@ -117,7 +162,6 @@ async def extract_text(file: UploadFile = File(...)):
                         properties=node.properties.model_dump() if node.properties else None
                     )
             
-            # Add edges (avoid exact duplicates)
             for edge in graph.edges:
                 edge_response = EdgeResponse(
                     source=edge.source,
@@ -125,7 +169,6 @@ async def extract_text(file: UploadFile = File(...)):
                     relationship=edge.relationship,
                     properties=edge.properties.model_dump() if edge.properties else None
                 )
-                # Check for duplicate edges
                 is_duplicate = any(
                     e.source == edge_response.source and 
                     e.target == edge_response.target and 
@@ -142,8 +185,11 @@ async def extract_text(file: UploadFile = File(...)):
         
         logger.info(f"Extracted {len(merged_graph.nodes)} nodes and {len(merged_graph.edges)} edges")
         
-        return ExtractPDFResponse(graph=merged_graph, chunk_count=len(all_chunks))
+        return ExtractGraphResponse(
+            graph=merged_graph,
+            chunk_count=len(request.chunks)
+        )
 
     except Exception as e:
-        logger.error(f"Error processing {file.filename}: {e}")
+        logger.error(f"Error extracting graph: {e}")
         raise HTTPException(status_code=500, detail=str(e))

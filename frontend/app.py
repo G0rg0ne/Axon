@@ -3,7 +3,6 @@ import os
 import requests
 from streamlit_agraph import agraph, Node, Edge, Config
 
-# Page configuration
 st.set_page_config(
     page_title="Axon",
     page_icon="🌐",
@@ -11,7 +10,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for modern styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap');
@@ -107,11 +105,9 @@ st.markdown("""
         overflow-y: auto;
     }
     
-    /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* File uploader styling */
     .stFileUploader > div > div {
         background: rgba(255, 255, 255, 0.02);
         border: 2px dashed rgba(0, 212, 255, 0.3);
@@ -121,32 +117,62 @@ st.markdown("""
     .stFileUploader > div > div:hover {
         border-color: rgba(0, 212, 255, 0.6);
     }
+    
+    .phase-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin: 0.5rem 0;
+    }
+    
+    .phase-active {
+        border-color: #00d4ff;
+        background: rgba(0, 212, 255, 0.1);
+    }
+    
+    .phase-done {
+        border-color: #22c55e;
+        background: rgba(34, 197, 94, 0.1);
+    }
+    
+    .phase-pending {
+        opacity: 0.5;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-
-# Extract text from PDF
 API_URL = os.getenv("API_URL","http://localhost:8000")
 
-# Color mapping for different entity types
 NODE_COLORS = {
-    "method":      "#3A86FF",  # Strong blue
-    "metric":      "#00B4D8",  # Cyan (clearly distinct from blue)
-    "dataset":     "#2EC4B6",  # Green-teal
-    "concept":     "#8338EC",  # Violet
-    "technology":  "#FFBE0B",  # Yellow / gold
-    "result":      "#FB5607",  # Bright orange
-    "problem":     "#D00000",  # Deep red
+    "method":      "#3A86FF",
+    "metric":      "#00B4D8",
+    "dataset":     "#2EC4B6",
+    "concept":     "#8338EC",
+    "technology":  "#FFBE0B",
+    "result":      "#FB5607",
+    "problem":     "#D00000",
 }
 
-def extract_knowledge_graph(pdf_file):
-    """Extract knowledge graph from PDF via API"""
+def parse_pdf(pdf_file):
     file_payload = {"file": (pdf_file.name, pdf_file.read(), "application/pdf")}
-    response = requests.post(f"{API_URL}/extract-text", files=file_payload, timeout=300)
+    response = requests.post(f"{API_URL}/parse-pdf", files=file_payload, timeout=120)
+    response.raise_for_status()
+    return response.json()
+
+def chunk_sections(sections, filename):
+    payload = {"sections": sections, "filename": filename}
+    response = requests.post(f"{API_URL}/chunk-sections", json=payload, timeout=120)
+    response.raise_for_status()
+    return response.json()
+
+def extract_graph(chunks):
+    payload = {"chunks": chunks}
+    response = requests.post(f"{API_URL}/extract-graph", json=payload, timeout=300)
+    response.raise_for_status()
     return response.json()
 
 def build_agraph_nodes(nodes_data):
-    """Convert API nodes to agraph Node objects"""
     nodes = []
     for node in nodes_data:
         color = NODE_COLORS.get(node.get("type", ""), "#888888")
@@ -161,7 +187,6 @@ def build_agraph_nodes(nodes_data):
     return nodes
 
 def build_agraph_edges(edges_data):
-    """Convert API edges to agraph Edge objects"""
     edges = []
     for edge in edges_data:
         edges.append(Edge(
@@ -174,7 +199,6 @@ def build_agraph_edges(edges_data):
     return edges
 
 def get_graph_config():
-    """Configure the graph visualization"""
     return Config(
         width="100%",
         height=700,
@@ -207,11 +231,27 @@ def get_graph_config():
         }
     )
 
-# Main Header
+def get_phase_html(current_phase, phase_results):
+    phases = [
+        ("📄", "Parsing PDF", "parse"),
+        ("✂️", "Chunking Sections", "chunk"),
+        ("🧠", "Extracting Knowledge Graph", "extract")
+    ]
+    
+    cards = []
+    for icon, name, key in phases:
+        if phase_results.get(key):
+            cards.append(f'''<div class="phase-card phase-done"><span style="color: #22c55e;">✓</span> {icon} {name}</div>''')
+        elif current_phase == key:
+            cards.append(f'''<div class="phase-card phase-active"><span style="color: #00d4ff;">●</span> {icon} {name}</div>''')
+        else:
+            cards.append(f'''<div class="phase-card phase-pending"><span style="color: #6b7280;">○</span> {icon} {name}</div>''')
+    
+    return f'''<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">{"".join(cards)}</div>'''
+
 st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle"> Agent that extracts knowledge graph from your documents</p>', unsafe_allow_html=True)
 
-# Upload Section
 st.markdown("### 📤 Upload Document")
 
 uploaded_file = st.file_uploader(
@@ -222,7 +262,6 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # Show file info
     file_size_kb = uploaded_file.size / 1024
     file_size_display = f"{file_size_kb:.1f} KB" if file_size_kb < 1024 else f"{file_size_kb/1024:.2f} MB"
     
@@ -235,47 +274,75 @@ if uploaded_file is not None:
     </div>
     """, unsafe_allow_html=True)
     
-    # Extract button
     if st.button("🧠 Extract Knowledge Graph", use_container_width=True):
-        with st.spinner("Extracting knowledge graph from PDF... This may take a moment."):
-            try:
-                uploaded_file.seek(0)
-                response = extract_knowledge_graph(uploaded_file)
+        phase_results = {}
+        progress_container = st.empty()
+        status_container = st.empty()
+        
+        try:
+            # Phase 1: Parse PDF
+            progress_container.markdown(get_phase_html("parse", phase_results), unsafe_allow_html=True)
+            status_container.info("📄 Parsing PDF and extracting sections...")
+            
+            uploaded_file.seek(0)
+            parse_result = parse_pdf(uploaded_file)
+            phase_results["parse"] = parse_result
+            
+            progress_container.markdown(get_phase_html("chunk", phase_results), unsafe_allow_html=True)
+            status_container.success(f"✓ Parsed PDF: {parse_result['section_count']} sections found")
+            
+            # Phase 2: Chunk Sections
+            status_container.info("✂️ Creating semantic chunks from sections...")
+            
+            chunk_result = chunk_sections(parse_result["sections"], uploaded_file.name)
+            phase_results["chunk"] = chunk_result
+            
+            progress_container.markdown(get_phase_html("extract", phase_results), unsafe_allow_html=True)
+            status_container.success(f"✓ Created {chunk_result['chunk_count']} semantic chunks")
+            
+            # Phase 3: Extract Graph
+            status_container.info("🧠 Extracting knowledge graph from chunks... This may take a moment.")
+            
+            graph_result = extract_graph(chunk_result["chunks"])
+            phase_results["extract"] = graph_result
+            
+            progress_container.markdown(get_phase_html(None, phase_results), unsafe_allow_html=True)
+            status_container.success("✓ Knowledge graph extraction complete!")
+            
+            graph_data = graph_result.get("graph", {})
+            nodes_data = graph_data.get("nodes", [])
+            edges_data = graph_data.get("edges", [])
+            chunk_count = graph_result.get("chunk_count", 0)
+            
+            if nodes_data:
+                st.session_state["graph_nodes"] = nodes_data
+                st.session_state["graph_edges"] = edges_data
+                st.session_state["chunk_count"] = chunk_count
+                st.session_state["section_count"] = parse_result['section_count']
+            else:
+                st.warning("⚠️ No entities could be extracted from this PDF.")
                 
-                graph_data = response.get("graph", {})
-                nodes_data = graph_data.get("nodes", [])
-                edges_data = graph_data.get("edges", [])
-                chunk_count = response.get("chunk_count", 0)
-                
-                if nodes_data:
-                    # Store in session state for persistence
-                    st.session_state["graph_nodes"] = nodes_data
-                    st.session_state["graph_edges"] = edges_data
-                    st.session_state["chunk_count"] = chunk_count
-                else:
-                    st.warning("⚠️ No entities could be extracted from this PDF.")
-                    
-            except Exception as e:
-                st.error(f"❌ Error extracting knowledge graph: {str(e)}")
+        except Exception as e:
+            status_container.error(f"❌ Error: {str(e)}")
 
-    # Display graph if available in session state
     if "graph_nodes" in st.session_state and st.session_state["graph_nodes"]:
         nodes_data = st.session_state["graph_nodes"]
         edges_data = st.session_state["graph_edges"]
         chunk_count = st.session_state["chunk_count"]
+        section_count = st.session_state.get("section_count", 0)
         
-        # Show extraction stats
         st.markdown("### 📊 Extraction Results")
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("🔷 Entities", len(nodes_data))
+            st.metric("📑 Sections", section_count)
         with col2:
-            st.metric("🔗 Relations", len(edges_data))
-        with col3:
             st.metric("📄 Chunks", chunk_count)
+        with col3:
+            st.metric("🔷 Entities", len(nodes_data))
+        with col4:
+            st.metric("🔗 Relations", len(edges_data))
         
-        # Entity type legend
         st.markdown("### 🎨 Entity Types")
         legend_cols = st.columns(len(NODE_COLORS))
         for i, (entity_type, color) in enumerate(NODE_COLORS.items()):
@@ -285,7 +352,6 @@ if uploaded_file is not None:
                     unsafe_allow_html=True
                 )
         
-        # Render interactive graph
         st.markdown("### 🕸️ Knowledge Graph")
         
         agraph_nodes = build_agraph_nodes(nodes_data)
@@ -294,9 +360,6 @@ if uploaded_file is not None:
         
         agraph(nodes=agraph_nodes, edges=agraph_edges, config=config)
         
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Show entities and relations in expandable sections
         with st.expander("📋 View All Entities"):
             for node in nodes_data:
                 color = NODE_COLORS.get(node.get("type", ""), "#888888")
@@ -312,7 +375,6 @@ if uploaded_file is not None:
                 st.markdown(f'`{edge["source"]}` → **{edge["relationship"]}** → `{edge["target"]}`')
 
 else:
-    # Empty state
     st.markdown("""
     <div class="upload-card">
         <h3 style="color: rgba(255,255,255,0.7); margin-bottom: 1rem;">👆 Drop your Scientific Paper here</h3>
@@ -320,7 +382,6 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-# Footer
 st.markdown("---")
 st.markdown(
     "<center><small style='color: rgba(255,255,255,0.4);'> Made by <a href='https://github.com/G0rg0ne' target='_blank' style='color: rgba(255,255,255,0.4); text-decoration: underline;'>Gorgone</a> - 2025 </small></center>",
