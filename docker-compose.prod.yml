@@ -37,10 +37,17 @@ services:
       - APP_MODE=PROD
       - API_URL=http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - axon-network
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   caddy:
     image: caddy:2-alpine
@@ -53,8 +60,10 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - axon-network
     restart: always
