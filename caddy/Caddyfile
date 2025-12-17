@@ -41,11 +41,12 @@ api.axon-agent.online {
     # Reverse proxy to FastAPI backend
     reverse_proxy backend:8000
 
-    # CORS headers (optional - can also be handled in FastAPI)
+    # CORS headers (restricted to main domain)
     header {
-        Access-Control-Allow-Origin *
+        Access-Control-Allow-Origin https://axon-agent.online
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
         Access-Control-Allow-Headers "Content-Type, Authorization"
+        Access-Control-Allow-Credentials true
     }
 
     # Logging
