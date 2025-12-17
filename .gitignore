@@ -87,3 +87,5 @@ coverage.xml
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
+
+docker-compose.yml
