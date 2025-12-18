@@ -483,6 +483,16 @@ else:
 
 st.markdown("---")
 st.markdown(
-    "<center><small style='color: rgba(255,255,255,0.4);'> Made by <a href='https://github.com/G0rg0ne' target='_blank' style='color: rgba(255,255,255,0.4); text-decoration: underline;'>Gorgone</a> - 2025 </small></center>",
+    """
+    <center>
+        <small style='color: rgba(255,255,255,0.4);'>
+            <a href='https://status.axon-agent.online/status/axon' target='_blank' style='color: #22c55e; text-decoration: none;'>
+                🟢 System Status
+            </a>
+            &nbsp;•&nbsp;
+            Made by <a href='https://github.com/G0rg0ne' target='_blank' style='color: rgba(255,255,255,0.4); text-decoration: underline;'>Gorgone</a> - 2025
+        </small>
+    </center>
+    """,
     unsafe_allow_html=True
 )
