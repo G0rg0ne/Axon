@@ -181,6 +181,76 @@ st.markdown("""
         letter-spacing: 0.05em;
         margin-bottom: 0.5rem;
     }
+    
+    .description-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        border-radius: 16px;
+        padding: 2rem;
+        margin: 2rem 0;
+        backdrop-filter: blur(10px);
+    }
+    
+    .description-section {
+        margin-bottom: 2rem;
+    }
+    
+    .description-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .description-title {
+        font-family: 'Sora', sans-serif;
+        font-size: 1.3rem;
+        color: #00d4ff;
+        margin-bottom: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .description-text {
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.7;
+        font-size: 1rem;
+    }
+    
+    .process-step {
+        background: rgba(0, 212, 255, 0.05);
+        border-left: 3px solid #00d4ff;
+        padding: 1rem 1.2rem;
+        margin: 0.8rem 0;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .process-step-title {
+        color: #00d4ff;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+        font-size: 1rem;
+    }
+    
+    .process-step-desc {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 1rem 0.5rem 0;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+    }
+    
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -325,6 +395,86 @@ def get_extraction_progress_html(current, total):
 
 st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle"> Agent that extracts knowledge graph from your documents</p>', unsafe_allow_html=True)
+
+# Description Section
+st.markdown("""
+<div class="description-card">
+    <div class="description-section">
+        <div class="description-title">🎯 What does Axon do?</div>
+        <div class="description-text">
+            Axon extracts structured knowledge from scientific papers and research documents. 
+            It identifies key entities like methods, datasets, metrics, and concepts, then maps 
+            how they relate to each other—transforming dense academic text into an interactive 
+            knowledge graph you can explore visually.
+        </div>
+    </div>
+    
+    <div class="description-section">
+        <div class="description-title">⚙️ How does it work?</div>
+        <div class="process-step">
+            <div class="process-step-title">📄 Step 1: Parse & Structure</div>
+            <div class="process-step-desc">
+                Your PDF is parsed and broken down into logical sections (Introduction, Methodology, Results, etc.)
+            </div>
+        </div>
+        <div class="process-step">
+            <div class="process-step-title">✂️ Step 2: Semantic Chunking</div>
+            <div class="process-step-desc">
+                Each section is intelligently split into semantic chunks that preserve context and meaning
+            </div>
+        </div>
+        <div class="process-step">
+            <div class="process-step-title">🧠 Step 3: Knowledge Extraction</div>
+            <div class="process-step-desc">
+                An AI model analyzes each chunk to extract entities and relationships, building a comprehensive knowledge graph
+            </div>
+        </div>
+    </div>
+    
+    <div class="description-section">
+        <div class="description-title">📊 How to read the graph?</div>
+        <div class="description-text" style="margin-bottom: 1rem;">
+            The knowledge graph visualizes entities as colored nodes connected by relationship edges. 
+            Each color represents a different type of entity:
+        </div>
+        <div style="display: flex; flex-wrap: wrap; margin-top: 1rem;">
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #3A86FF;"></span>
+                <strong>Methods</strong> — Research approaches and techniques
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #00B4D8;"></span>
+                <strong>Metrics</strong> — Evaluation measures and benchmarks
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #2EC4B6;"></span>
+                <strong>Datasets</strong> — Data collections used in research
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #8338EC;"></span>
+                <strong>Concepts</strong> — Key ideas and theoretical constructs
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #FFBE0B;"></span>
+                <strong>Technologies</strong> — Tools, frameworks, and platforms
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #FB5607;"></span>
+                <strong>Results</strong> — Findings and outcomes
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: #D00000;"></span>
+                <strong>Problems</strong> — Challenges and research questions
+            </div>
+        </div>
+        <div class="description-text" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <strong>Interpreting connections:</strong> Edges between nodes show relationships (e.g., "uses", "evaluates", "compares"). 
+            Hover over nodes to see descriptions, and explore the graph by dragging nodes to reorganize the layout. 
+            Dense clusters indicate closely related concepts, while isolated nodes represent standalone entities.
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("### 📤 Upload Document")
 
