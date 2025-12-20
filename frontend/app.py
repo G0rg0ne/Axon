@@ -183,57 +183,60 @@ st.markdown("""
     }
     
     .description-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(0, 212, 255, 0.2);
-        border-radius: 16px;
-        padding: 2rem;
-        margin: 2rem 0;
-        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(0, 212, 255, 0.2) !important;
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        margin: 2rem 0 !important;
+        backdrop-filter: blur(10px) !important;
     }
     
     .description-section {
-        margin-bottom: 2rem;
+        margin-bottom: 2rem !important;
     }
     
     .description-section:last-child {
-        margin-bottom: 0;
+        margin-bottom: 0 !important;
     }
     
     .description-title {
-        font-family: 'Sora', sans-serif;
-        font-size: 1.3rem;
-        color: #00d4ff;
-        margin-bottom: 0.8rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        font-family: 'Sora', sans-serif !important;
+        font-size: 1.3rem !important;
+        color: #00d4ff !important;
+        margin-bottom: 0.8rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
     }
     
     .description-text {
-        color: rgba(255, 255, 255, 0.8);
-        line-height: 1.7;
-        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.8) !important;
+        line-height: 1.7 !important;
+        font-size: 1rem !important;
     }
     
     .process-step {
-        background: rgba(0, 212, 255, 0.05);
-        border-left: 3px solid #00d4ff;
-        padding: 1rem 1.2rem;
-        margin: 0.8rem 0;
-        border-radius: 0 8px 8px 0;
+        background: rgba(0, 212, 255, 0.05) !important;
+        border-left: 3px solid #00d4ff !important;
+        padding: 1rem 1.2rem !important;
+        margin: 0.8rem 0 !important;
+        border-radius: 0 8px 8px 0 !important;
+        display: block !important;
     }
     
     .process-step-title {
-        color: #00d4ff;
-        font-weight: 600;
-        margin-bottom: 0.4rem;
-        font-size: 1rem;
+        color: #00d4ff !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.4rem !important;
+        font-size: 1rem !important;
+        display: block !important;
     }
     
     .process-step-desc {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 0.9rem;
-        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 0.9rem !important;
+        line-height: 1.6 !important;
+        display: block !important;
     }
     
     .legend-item {
@@ -250,6 +253,27 @@ st.markdown("""
         height: 12px;
         border-radius: 50%;
         display: inline-block;
+    }
+    
+    /* Ensure Streamlit wrapper divs don't interfere */
+    div[data-testid="stMarkdownContainer"] .description-card,
+    .stMarkdown .description-card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(0, 212, 255, 0.2) !important;
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        margin: 2rem 0 !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    
+    div[data-testid="stMarkdownContainer"] .process-step,
+    .stMarkdown .process-step {
+        background: rgba(0, 212, 255, 0.05) !important;
+        border-left: 3px solid #00d4ff !important;
+        padding: 1rem 1.2rem !important;
+        margin: 0.8rem 0 !important;
+        border-radius: 0 8px 8px 0 !important;
+        display: block !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -397,7 +421,7 @@ st.markdown('<h1 class="main-header"> Axon </h1>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle"> Agent that extracts knowledge graph from your documents</p>', unsafe_allow_html=True)
 
 # Description Section
-st.markdown("""
+description_html = """
 <div class="description-card">
     <div class="description-section">
         <div class="description-title">🎯 What does Axon do?</div>
@@ -474,7 +498,13 @@ st.markdown("""
         </div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+"""
+# Use st.html() for better HTML rendering (available in Streamlit 1.28+)
+try:
+    st.html(description_html)
+except AttributeError:
+    # Fallback to st.markdown if st.html is not available
+    st.markdown(description_html, unsafe_allow_html=True)
 
 st.markdown("### 📤 Upload Document")
 
