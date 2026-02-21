@@ -66,6 +66,7 @@ services:
         condition: service_healthy
     networks:
       - axon-network
+      - caddy_proxy
     restart: always
 
   uptime-kuma:
@@ -88,6 +89,8 @@ services:
 networks:
   axon-network:
     driver: bridge
+  caddy_proxy:
+    external: true
 
 volumes:
   caddy_data:
